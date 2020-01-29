@@ -26,6 +26,7 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Twist.h>
 #include <visualization_msgs/Marker.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/Float32MultiArray.h>
@@ -68,17 +69,20 @@
 #include <DynaMoP/DynaMoP.h>
 
 #define NUM_BASE_DOF 3
-#define MAX_COlUMN 1000
+#define MAX_COLUMN 1000
 #define MAX_ROW 6
 #define MAX_WORDS 20
 
 #define SEARCH_AREA 1.0
 
+// Global variables
 geometry_msgs::Pose start_pose;
 geometry_msgs::Pose goal_pose;
+std::vector<moveit_msgs::CollisionObject> tmp_collision_objects;
 
 bool required_plan = true;
 
+//Propagtion for kinodynamic
 void propagate(const ompl::base::State *start, const ompl::control::Control *control, const double duration, ompl::base::State *result){
     const auto *se2state = start->as<ompl::base::SE2StateSpace::StateType>();
     const double* pos = se2state->as<ompl::base::RealVectorStateSpace::StateType>(0)->values;
@@ -91,12 +95,12 @@ void propagate(const ompl::base::State *start, const ompl::control::Control *con
     result->as<ompl::base::SE2StateSpace::StateType>()->setYaw(
         rot    + ctrl[1] * duration);
 }
-
-void set_start_pose(const tf2_msgs::TFMessage::ConstPtr& _msg){
+//Get start position from world
+void get_start_pose(const tf2_msgs::TFMessage::ConstPtr& _msg){
     // Convert tf2_msgs to geometry_msgs::Pose
     // std::cout << " _msg->transforms.size() : " <<  _msg->transforms.size() << std::endl;
     for(int i = 0; i < _msg->transforms.size(); i++){
-        if(std::string("world").compare(_msg->transforms.at(i).child_frame_id) == 0){
+        if(std::string("odom").compare(_msg->transforms.at(i).child_frame_id) == 0){
             start_pose.position.x = _msg->transforms.at(i).transform.translation.x;
             start_pose.position.y = _msg->transforms.at(i).transform.translation.y;
             start_pose.position.z = 0.0;
@@ -105,18 +109,34 @@ void set_start_pose(const tf2_msgs::TFMessage::ConstPtr& _msg){
             start_pose.orientation.x = _msg->transforms.at(i).transform.rotation.x;
             start_pose.orientation.y = _msg->transforms.at(i).transform.rotation.y;
             start_pose.orientation.z = _msg->transforms.at(i).transform.rotation.z;
-            // ROS_INFO("Set start!");
+            ROS_INFO("Get start!");
             break;
         }
     }
 
 //    std::cout << "Set start pose" << std::endl;
 }
-
+//Set goal point on world
 void set_goal_pose(const geometry_msgs::PoseStamped::ConstPtr& _msg){
     goal_pose = _msg->pose;
     required_plan = true;
     ROS_INFO("Set goal!");
+}
+//Get moveit! planning scene
+void get_planning_scene(const moveit_msgs::PlanningScene::ConstPtr& _msg){
+
+  std::vector<moveit_msgs::CollisionObject> tmp(std::begin(_msg->world.collision_objects), std::end(_msg->world.collision_objects));
+  double size_of_planning_scene = tmp.size();
+
+  std::cout<< "size_of_planning_scene : " << size_of_planning_scene <<std::endl;
+  std::cout<< "Hololololololo~~~~" <<std::endl;
+
+  if(size_of_planning_scene != 0){
+    for(int i=0; i<size_of_planning_scene; i++)
+      tmp_collision_objects.push_back(_msg->world.collision_objects[i]);
+  }
+  else
+    return;
 }
 
 int main(int argc, char** argv) {
@@ -126,8 +146,8 @@ int main(int argc, char** argv) {
     // ros::NodeHandle node_handle("~");
     ros::NodeHandle node_handle;
 
-    double st[3] = {7.0, 6.0, 0.0};
-    double gl[3] = {-7.0, -7.0, -M_PI/6};
+    double st[3] = {0.0, 0.0, 0.0};
+    double gl[3] = {0.0, 10.0, -M_PI/6};
     // Initialize the global variables
     start_pose.position.x = st[0];
     start_pose.position.y = st[1];
@@ -138,26 +158,30 @@ int main(int argc, char** argv) {
     goal_pose.orientation.w = gl[2];
 
     //Publisher
-    ros::Publisher display_pub = node_handle.advertise<moveit_msgs::DisplayTrajectory>("dynamop/move_group/display_planned_path", 1, true);
-    ros::Publisher point_pub = node_handle.advertise<visualization_msgs::Marker>("dynamop/StartGoalPoints",0);
-    ros::Publisher path_pub = node_handle.advertise<nav_msgs::Path>("dynamop/path_vis",1);
-    ros::Publisher pose_pub = node_handle.advertise<std_msgs::Float32MultiArray>("dynamop/path_pose",3);
+    ros::Publisher display_pub = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/dynamop/move_group/display_planned_path", 1, true);
+    ros::Publisher point_pub = node_handle.advertise<visualization_msgs::Marker>("/dynamop/StartGoalPoints",1);
+    ros::Publisher path_pub = node_handle.advertise<nav_msgs::Path>("/dynamop/path_vis",1);
+    ros::Publisher vel_pub = node_handle.advertise<geometry_msgs::Twist>("/husky/husky_velocity_controller/cmd_vel",100);
     //Subscriber
-    // ros::Subscriber start_pose_subscriber = node_handle.subscribe("/tf", 1, set_start_pose);
-    ros::Subscriber goal_pose_subscriber = node_handle.subscribe("/goal", 1, set_goal_pose);
+    // ros::Subscriber start_pose_subscriber = node_handle.subscribe("/tf", 1, get_start_pose);
+    ros::Subscriber goal_pose_subscriber = node_handle.subscribe("/move_base_simple/goal", 1, set_goal_pose);
     // ros::Subscriber goal_pose_subscriber = node_handle.subscribe("/goal", 1, set_goal_pose);
+    ros::Subscriber scene_subscriber = node_handle.subscribe("/husky/planning_scene", 1, get_planning_scene);
 
-    //// Please set your group in moveit!.
-//    const std::string PLANNING_GROUP = "husky_ur_moveit_config";
+    // Please set your group in moveit!.
     const std::string PLANNING_GROUP = "vehicle";
-    //const std::string PLANNING_GROUP = "husky";
     // const std::string BASE_GROUP = "base";
     // const std::string MANI_COLL_CHECK_GROUP = "without_right_arm";
     robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
     robot_model::RobotModelPtr robot_model = robot_model_loader.getModel();
     robot_state::RobotStatePtr robot_state(new robot_state::RobotState(robot_model));
     const robot_state::JointModelGroup* joint_model_group = robot_state->getJointModelGroup(PLANNING_GROUP);
-    planning_scene::PlanningScenePtr planning_scene(new planning_scene::PlanningScene(robot_model));
+    planning_scene::PlanningScenePtr planning_scene(new planning_scene::PlanningScene(robot_model));//moveit_core::planning_scene::PlanningScenePtr
+
+    // moveit planning scene
+    ScenePtr scene(new Scene(planning_scene, "odom"));
+    scene->addCollisionObjects(tmp_collision_objects);
+    scene->updateCollisionScene();
 
     //// Please set your start configuration and predefined configuration.
     std::vector<double> s_conf, pre_conf;
@@ -166,10 +190,7 @@ int main(int argc, char** argv) {
     joint_model_group->getVariableDefaultPositions(pre_conf);
     pre_conf.erase(pre_conf.begin(), pre_conf.begin()+NUM_BASE_DOF);
 
-    // moveit planning scene
-    ScenePtr scene(new Scene(planning_scene, "world"));
-    scene->addCollisionObjects();
-    scene->updateCollisionScene();
+
 
     // state space
     std::string collisionCheckGroup;
@@ -191,10 +212,12 @@ int main(int argc, char** argv) {
       // wait until the goal is set
       if(!required_plan){
           ros::spinOnce();
+          scene->addCollisionObjects(tmp_collision_objects);
+          scene->updateCollisionScene();
           // Start, Goal marker
           visualization_msgs::Marker points;
           geometry_msgs::Point pt;
-          points.header.frame_id ="world";
+          points.header.frame_id ="odom";
           points.header.stamp= ros::Time();
 
           points.ns="Start_Pt";
@@ -283,7 +306,7 @@ int main(int argc, char** argv) {
 
       // Planning
       simple_setup->setPlanner(ompl::base::PlannerPtr(new ompl::control::DynaMoP(simple_setup->getSpaceInformation())));
-      simple_setup->solve(ompl::base::timedPlannerTerminationCondition(10.));
+      simple_setup->solve(ompl::base::timedPlannerTerminationCondition(0.5));
 
       if (simple_setup->haveSolutionPath()){
         std::cout << "Found solution:" << std::endl;
@@ -299,7 +322,7 @@ int main(int argc, char** argv) {
         std::fstream filein("/home/mrjohd/MotionPlanning_ws/src/DynamicMotionPlanning/dynamo_planner/path.txt", std::ios::in);
 
         char word;
-        char data[MAX_COlUMN][MAX_ROW][MAX_WORDS]={0};
+        char data[MAX_COLUMN][MAX_ROW][MAX_WORDS]={0};
         int i=0, j=0, k;
         //Read text
         while(filein.get(word)){
@@ -326,15 +349,17 @@ int main(int argc, char** argv) {
         //Robot trajectory
         moveit_msgs::DisplayTrajectory display_trajectory;
         moveit_msgs::RobotTrajectory robot_traj;
+
+        //Velocity publish
+        geometry_msgs::Twist vel;
+
         //Path visualize
         nav_msgs::Path path_vis;
         geometry_msgs::PoseStamped robot_pose;
-        std_msgs::Float32MultiArray path_data;
-        path_data.data.clear();
 
         path_vis.poses.clear();
         path_vis.header.stamp = ros::Time::now();
-        path_vis.header.frame_id = "world";
+        path_vis.header.frame_id = "odom";
 
         const moveit::core::JointModelGroup* model_group = planning_scene->getRobotModel()->getJointModelGroup(PLANNING_GROUP);
         const std::vector<std::string>& active_joint_names = model_group->getActiveJointModelNames();
@@ -357,21 +382,24 @@ int main(int argc, char** argv) {
                 double traj_value = std::stod(static_cast<const std::string>(data[i][j]));
                 //robot_traj.joint_trajectory.points[i].positions[j] = rstate->values[j];
                 robot_traj.joint_trajectory.points[i].positions[j] = traj_value;
-                path_data.data.push_back(traj_value);
+
+                vel.linear.x = std::stod(static_cast<const std::string>(data[i][3]));
+                vel.linear.y = std::stod(static_cast<const std::string>(data[i][4]));
+                vel.angular.z = std::stod(static_cast<const std::string>(data[i][5]));
             }
             robot_pose.pose.position.x = robot_traj.joint_trajectory.points[i].positions[0];
             robot_pose.pose.position.y = robot_traj.joint_trajectory.points[i].positions[1];
             path_vis.poses.push_back(robot_pose);
 
             robot_traj.joint_trajectory.points[i].time_from_start = ros::Duration(0.0);
-            pose_pub.publish(path_data);
-            path_data.data.clear();
         }
         display_trajectory.trajectory.push_back(robot_traj);
         display_pub.publish(display_trajectory);
 
         //Path visulaization
         path_pub.publish(path_vis);
+
+        vel_pub.publish(vel);
 
         // ros::Duration(1.0).sleep();
       }

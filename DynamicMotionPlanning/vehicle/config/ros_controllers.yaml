@@ -9,9 +9,6 @@ generic_hw_control_loop:
 # Settings for ros_control hardware interface
 hardware_interface:
   joints:
-    - base_x_joint
-    - base_y_joint
-    - base_yaw_joint
     - front_left_wheel
     - front_right_wheel
     - rear_left_wheel
@@ -23,15 +20,32 @@ joint_state_controller:
   type: joint_state_controller/JointStateController
   publish_rate: 50
 controller_list:
-  - name: vehicle_controller
-    action_ns: follow_joint_trajectory
-    default: True
-    type: FollowJointTrajectory
-    joints:
-      - base_x_joint
-      - base_y_joint
-      - base_yaw_joint
-      - front_left_wheel
-      - front_right_wheel
-      - rear_left_wheel
-      - rear_right_wheel
+  []
+vehicle_controller:
+  type: velocity_controllers/JointvelocityController
+  joints:
+    - front_left_wheel
+    - front_right_wheel
+    - rear_left_wheel
+    - rear_right_wheel
+  gains:
+    front_left_wheel:
+      p: 100
+      d: 1
+      i: 1
+      i_clamp: 1
+    front_right_wheel:
+      p: 100
+      d: 1
+      i: 1
+      i_clamp: 1
+    rear_left_wheel:
+      p: 100
+      d: 1
+      i: 1
+      i_clamp: 1
+    rear_right_wheel:
+      p: 100
+      d: 1
+      i: 1
+      i_clamp: 1

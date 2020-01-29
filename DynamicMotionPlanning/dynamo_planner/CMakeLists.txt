@@ -19,6 +19,9 @@ find_package(catkin REQUIRED COMPONENTS
         moveit_ros_planning_interface
         tf
         tf2
+        controller_manager
+        joint_state_controller
+        robot_state_publisher
         )
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1")
 find_package(ompl REQUIRED)
@@ -180,6 +183,7 @@ catkin_package(
 include_directories(
         include
         /opt/ros/kinetic/share/gazebo_plugins/include
+        # /opt/ros/kinetic/share/gazebo_ros_control/include
         ${catkin_INCLUDE_DIRS}
         ${OMPL_INCLUDE_DIRS}
 )
@@ -218,21 +222,30 @@ target_link_libraries(main
         ${OMPL_LIBRARIES}
         )
 
-add_library(husky
-        src/husky.cc
+# add_library(husky
+#         src/husky.cc
+#         )
+# target_link_libraries(husky
+#         ${catkin_LIBRARIES}
+#         ${GAZEBO_LIBRARIES}
+#         )
+
+add_library(gazebo_ros_moveit_planning_scene
+        /opt/ros/kinetic/share/gazebo_plugins/src/gazebo_ros_moveit_planning_scene.cpp
         )
-target_link_libraries(husky
+target_link_libraries(gazebo_ros_moveit_planning_scene
         ${catkin_LIBRARIES}
         ${GAZEBO_LIBRARIES}
         )
 
-add_library(planning_scene
-        /opt/ros/kinetic/share/gazebo_plugins/src/gazebo_ros_moveit_planning_scene.cpp
-        )
-target_link_libraries(planning_scene
-        ${catkin_LIBRARIES}
-        ${GAZEBO_LIBRARIES}
-        )
+# add_library(gazebo_ros_control
+#         /opt/ros/kinetic/share/gazebo_ros_control/src/gazebo_ros_control_plugin.cpp
+#         /opt/ros/kinetic/share/gazebo_ros_control/src/default_robot_hw_sim.cpp
+#         )
+# target_link_libraries(gazebo_ros_control
+#         ${catkin_LIBRARIES}
+#         ${GAZEBO_LIBRARIES}
+#         )
 
 #############
 ## Install ##

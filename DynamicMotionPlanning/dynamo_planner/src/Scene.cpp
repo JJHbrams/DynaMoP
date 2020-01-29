@@ -8,18 +8,18 @@ Scene::Scene(planning_scene::PlanningScenePtr& planning_scene, std::string frame
     frameID_ = frameID;
 }
 
-void Scene::addCollisionObjects(){
+void Scene::addCollisionObjects(std::vector<moveit_msgs::CollisionObject> tmp_collision_objects){
+/*
     std::vector<moveit_msgs::CollisionObject> collision_objects;
-
     //                                                     x            y           z     dx   dy     dz  yaw
     double table_x = 0.0;
     double table_y = 0.0;
     //                                                     x            y           z     dx   dy     dz  yaw
-    collision_objects.push_back(addBox("table1.Up",    table_x,     table_y,     0.7,  0.6, 1.2,   0.05, 0.0));
-    collision_objects.push_back(addBox("table1.leg01", table_x-0.2, table_y-0.5, 0.35, 0.1, 0.1,   0.7, 0.0));
-    collision_objects.push_back(addBox("table1.leg02", table_x-0.2, table_y+0.5, 0.35, 0.1, 0.1,   0.7, 0.0));
-    collision_objects.push_back(addBox("table1.leg03", table_x+0.2, table_y-0.5, 0.35, 0.1, 0.1,   0.7, 0.0));
-    collision_objects.push_back(addBox("table1.leg04", table_x+0.2, table_y+0.5, 0.35, 0.1, 0.1,   0.7, 0.0));
+    // collision_objects.push_back(addBox("table1.Up",    table_x,     table_y,     0.7,  0.6, 1.2,   0.05, 0.0));
+    // collision_objects.push_back(addBox("table1.leg01", table_x-0.2, table_y-0.5, 0.35, 0.1, 0.1,   0.7, 0.0));
+    // collision_objects.push_back(addBox("table1.leg02", table_x-0.2, table_y+0.5, 0.35, 0.1, 0.1,   0.7, 0.0));
+    // collision_objects.push_back(addBox("table1.leg03", table_x+0.2, table_y-0.5, 0.35, 0.1, 0.1,   0.7, 0.0));
+    // collision_objects.push_back(addBox("table1.leg04", table_x+0.2, table_y+0.5, 0.35, 0.1, 0.1,   0.7, 0.0));
 
     table_x = -1.0;
     table_y = -1.0;
@@ -59,7 +59,20 @@ void Scene::addCollisionObjects(){
     collision_objects.push_back(addBox("obs.02",       1.5,      3.0,  0.25,   1.4,   1.7,    0.5, 0.0));
     collision_objects.push_back(addBox("obs.03",       0.0,      -2.0,  0.25,   0.5,   0.5,    0.5, 0.0));
 
+
     planning_scene_interface_.applyCollisionObjects(collision_objects);
+*/
+
+    if(tmp_collision_objects.size() != 0){
+      // std::cout << "tmp_collision_objects.size() : " << tmp_collision_objects.size() << std::endl;
+/*      for(uint i=0; i < tmp_collision_objects.size(); i++){
+        moveit_msgs::CollisionObject collision_object = tmp_collision_objects.at(i);
+        collision_object.header.frame_id = frameID_;
+      }*/
+      planning_scene_interface_.applyCollisionObjects(tmp_collision_objects);
+    }
+    else
+      return;
 }
 
 moveit_msgs::CollisionObject Scene::addBox(std::string name,
