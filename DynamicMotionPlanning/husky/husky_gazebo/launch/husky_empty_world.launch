@@ -25,13 +25,13 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 -->
 <launch>
 
-  <arg name="world_name" default="worlds/empty.world"/>
+  <arg name="world_name" default="$(find husky_gazebo)/worlds/maze.world"/>
 
   <arg name="laser_enabled" default="true"/>
   <arg name="kinect_enabled" default="false"/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(arg world_name)"/>  (여기 주석 world_name is wrt GAZEBO_RESOURCE_PATH environment variable)
+    <arg name="world_name" value="$(arg world_name)"/> <!-- world_name is wrt GAZEBO_RESOURCE_PATH environment variable -->
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="true"/>
@@ -43,5 +43,27 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
     <arg name="laser_enabled" value="$(arg laser_enabled)"/>
     <arg name="kinect_enabled" value="$(arg kinect_enabled)"/>
   </include>
+
+
+  <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
+  <include file="$(find vehicle)/launch/planning_context.launch">
+    <arg name="load_robot_description" value="false"/>
+  </include>
+
+
+  <!-- Run the main MoveIt! executable without trajectory execution (we do not have controllers configured by default) -->
+  <include file="$(find vehicle)/launch/move_group.launch">
+    <arg name="allow_trajectory_execution" value="true"/>
+    <arg name="fake_execution" value="false"/>
+    <arg name="info" value="true"/>
+    <arg name="debug" value="false"/>
+  </include>
+
+  <!-- Run Rviz and load the default config to see the state of the move_group node -->
+  <include file="$(find husky_viz)/launch/view_robot.launch"/>
+
+  <!-- Run SLAM and load the default config -->
+  <include file="$(find husky_navigation)/launch/gmapping_demo.launch"/>
+
 
 </launch>

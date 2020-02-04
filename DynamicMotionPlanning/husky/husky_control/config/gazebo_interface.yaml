@@ -12,6 +12,8 @@ from_sim:
       type: sensor_msgs/NavSatFix
     - topic: navsat/vel
       type: geometry_msgs/Vector3Stamped
+    - topic: planning_scene
+      type: moveit_msgs/PlanningScene
 
   services:
     - servce: controller_manager/list_controller_types

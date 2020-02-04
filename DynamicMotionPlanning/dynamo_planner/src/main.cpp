@@ -100,7 +100,7 @@ void get_start_pose(const tf2_msgs::TFMessage::ConstPtr& _msg){
     // Convert tf2_msgs to geometry_msgs::Pose
     // std::cout << " _msg->transforms.size() : " <<  _msg->transforms.size() << std::endl;
     for(int i = 0; i < _msg->transforms.size(); i++){
-        if(std::string("odom").compare(_msg->transforms.at(i).child_frame_id) == 0){
+        if(std::string("world").compare(_msg->transforms.at(i).child_frame_id) == 0){
             start_pose.position.x = _msg->transforms.at(i).transform.translation.x;
             start_pose.position.y = _msg->transforms.at(i).transform.translation.y;
             start_pose.position.z = 0.0;
@@ -161,12 +161,12 @@ int main(int argc, char** argv) {
     ros::Publisher display_pub = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/dynamop/move_group/display_planned_path", 1, true);
     ros::Publisher point_pub = node_handle.advertise<visualization_msgs::Marker>("/dynamop/StartGoalPoints",1);
     ros::Publisher path_pub = node_handle.advertise<nav_msgs::Path>("/dynamop/path_vis",1);
-    ros::Publisher vel_pub = node_handle.advertise<geometry_msgs::Twist>("/husky/husky_velocity_controller/cmd_vel",100);
+    // ros::Publisher vel_pub = node_handle.advertise<geometry_msgs::Twist>("/husky_velocity_controller/cmd_vel",100);
     //Subscriber
     // ros::Subscriber start_pose_subscriber = node_handle.subscribe("/tf", 1, get_start_pose);
     ros::Subscriber goal_pose_subscriber = node_handle.subscribe("/move_base_simple/goal", 1, set_goal_pose);
     // ros::Subscriber goal_pose_subscriber = node_handle.subscribe("/goal", 1, set_goal_pose);
-    ros::Subscriber scene_subscriber = node_handle.subscribe("/husky/planning_scene", 1, get_planning_scene);
+    ros::Subscriber scene_subscriber = node_handle.subscribe("/planning_scene", 1, get_planning_scene);
 
     // Please set your group in moveit!.
     const std::string PLANNING_GROUP = "vehicle";
@@ -179,7 +179,7 @@ int main(int argc, char** argv) {
     planning_scene::PlanningScenePtr planning_scene(new planning_scene::PlanningScene(robot_model));//moveit_core::planning_scene::PlanningScenePtr
 
     // moveit planning scene
-    ScenePtr scene(new Scene(planning_scene, "odom"));
+    ScenePtr scene(new Scene(planning_scene, "world"));
     scene->addCollisionObjects(tmp_collision_objects);
     scene->updateCollisionScene();
 
@@ -208,6 +208,7 @@ int main(int argc, char** argv) {
     auto control_space(std::make_shared<ompl::control::RealVectorControlSpace>(state_space, 2));
 
     ros::Rate rate(1);//1Hz
+
     while(node_handle.ok()){
       // wait until the goal is set
       if(!required_plan){
@@ -217,7 +218,7 @@ int main(int argc, char** argv) {
           // Start, Goal marker
           visualization_msgs::Marker points;
           geometry_msgs::Point pt;
-          points.header.frame_id ="odom";
+          points.header.frame_id ="world";
           points.header.stamp= ros::Time();
 
           points.ns="Start_Pt";
@@ -359,7 +360,7 @@ int main(int argc, char** argv) {
 
         path_vis.poses.clear();
         path_vis.header.stamp = ros::Time::now();
-        path_vis.header.frame_id = "odom";
+        path_vis.header.frame_id = "world";
 
         const moveit::core::JointModelGroup* model_group = planning_scene->getRobotModel()->getJointModelGroup(PLANNING_GROUP);
         const std::vector<std::string>& active_joint_names = model_group->getActiveJointModelNames();
@@ -399,7 +400,7 @@ int main(int argc, char** argv) {
         //Path visulaization
         path_pub.publish(path_vis);
 
-        vel_pub.publish(vel);
+        // vel_pub.publish(vel);
 
         // ros::Duration(1.0).sleep();
       }

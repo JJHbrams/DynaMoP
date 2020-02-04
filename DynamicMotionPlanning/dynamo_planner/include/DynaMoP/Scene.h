@@ -10,6 +10,7 @@ class Scene
 {
 public:
     Scene(planning_scene::PlanningScenePtr& planning_scene, std::string frameID);
+    void addCollisionObjects();
     void addCollisionObjects(std::vector<moveit_msgs::CollisionObject> tmp_collision_objects);
     void updateCollisionScene();
     moveit_msgs::CollisionObject addBox(std::string name,

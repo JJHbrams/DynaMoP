@@ -230,10 +230,10 @@ target_link_libraries(main
 #         ${GAZEBO_LIBRARIES}
 #         )
 
-add_library(gazebo_ros_moveit_planning_scene
+add_library(planning_scene
         /opt/ros/kinetic/share/gazebo_plugins/src/gazebo_ros_moveit_planning_scene.cpp
         )
-target_link_libraries(gazebo_ros_moveit_planning_scene
+target_link_libraries(planning_scene
         ${catkin_LIBRARIES}
         ${GAZEBO_LIBRARIES}
         )
